@@ -2,6 +2,7 @@ import { bookService } from './bookService';
 import { orderService } from './orderService';
 import { reviewService } from './reviewService';
 import { tokenService } from './tokenService';
+import { settingsService } from './settingsService';
 import { loadStripe } from '@stripe/stripe-js';
 
 const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY);
@@ -29,35 +30,19 @@ export const api = {
   },
 
   getBookById: (id) => bookService.getBookById(id),
-
   getReviews: (bookId) => reviewService.getReviewsByBookId(bookId),
-  
   submitReview: (review) => reviewService.addReview(review),
 
-  // Stripe Checkout Flow
   createCheckoutSession: async (cart, email) => {
-    // In a real app, this would be a call to your backend /api/checkout
-    // For this simulation, we'll store the intent and redirect to a success page
     const total = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
-    
-    // Simulate session creation delay
     await new Promise(r => setTimeout(r, 1000));
     
-    // Store temporary checkout data to be picked up on success page
-    const sessionData = {
-      email,
-      cart,
-      total,
-      timestamp: Date.now()
-    };
+    const sessionData = { email, cart, total, timestamp: Date.now() };
     localStorage.setItem('pending_checkout', JSON.stringify(sessionData));
     
-    // Normally: const stripe = await stripePromise; await stripe.redirectToCheckout({ sessionId });
-    // Here: Redirect to our internal success route which handles the "webhook" logic
     return { success: true, url: '#/checkout/success' };
   },
 
-  // Finalize order after successful payment
   finalizeOrder: async () => {
     const data = JSON.parse(localStorage.getItem('pending_checkout'));
     if (!data) return null;
@@ -76,9 +61,10 @@ export const api = {
 
   validateDownloadToken: (token) => tokenService.validateToken(token),
 
+  // Admin and Settings
   getAdminStats: async () => {
     const [books, orders] = await Promise.all([
-      bookService.getAllBooks(),
+      bookService.getAllBooks(true), // Force refresh for admin
       orderService.getAllOrders()
     ]);
     
@@ -90,5 +76,13 @@ export const api = {
       totalBooks: books.length,
       recentOrders: orders.slice().reverse().slice(0, 10)
     };
+  },
+
+  getSheetHeaders: () => bookService.getHeaders(),
+  getColumnMapping: () => settingsService.getMapping(),
+  updateColumnMapping: async (mapping) => {
+    await settingsService.updateMapping(mapping);
+    bookService.clearCache(); // Force books to reload with new mapping
+    return true;
   }
 };
