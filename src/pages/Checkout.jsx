@@ -5,16 +5,15 @@ import { api } from '../services/api';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
 import SafeIcon from '../common/SafeIcon';
-import { FiLock, FiCheckCircle } from 'react-icons/fi';
+import { FiLock } from 'react-icons/fi';
 
 export const Checkout = () => {
-  const { cart, cartTotal, clearCart } = useCart();
+  const { cart, cartTotal } = useCart();
   const navigate = useNavigate();
   const [email, setEmail] = useState('');
   const [loading, setLoading] = useState(false);
-  const [success, setSuccess] = useState(null);
 
-  if (cart.length === 0 && !success) {
+  if (cart.length === 0) {
     return (
       <div className="container mx-auto px-4 py-20 text-center">
         <h2 className="text-2xl font-bold mb-4">Your cart is empty</h2>
@@ -23,14 +22,14 @@ export const Checkout = () => {
     );
   }
 
-  const handlePayment = async (e) => {
+  const handleStripeCheckout = async (e) => {
     e.preventDefault();
     setLoading(true);
     try {
-      const response = await api.checkout(cart, email);
+      const response = await api.createCheckoutSession(cart, email);
       if (response.success) {
-        setSuccess(response);
-        clearCart();
+        // In this simulation, we go to our internal success page
+        window.location.hash = '/checkout/success';
       }
     } catch (err) {
       console.error(err);
@@ -38,100 +37,85 @@ export const Checkout = () => {
     setLoading(false);
   };
 
-  if (success) {
-    return (
-      <div className="container mx-auto px-4 py-20 max-w-2xl text-center">
-        <SafeIcon icon={FiCheckCircle} className="w-20 h-20 text-green-500 mx-auto mb-6" />
-        <h1 className="text-4xl font-bold mb-4">Payment Successful!</h1>
-        <p className="text-lg text-[hsl(var(--muted-foreground))] mb-8">
-          Thank you for your purchase. We've sent a receipt to <strong>{email}</strong>.
-        </p>
-        <div className="bg-[hsl(var(--muted))/30] p-6 rounded-xl border border-[hsl(var(--border))] mb-8 text-left">
-          <h3 className="font-bold text-lg mb-4">Your Download Links:</h3>
-          <div className="flex flex-col gap-3">
-            {success.tokens.map(t => (
-              <div key={t.token} className="flex justify-between items-center bg-[hsl(var(--background))] p-3 rounded-md border border-[hsl(var(--border))]">
-                <span className="font-medium">{t.bookTitle}</span>
-                <Button size="sm" onClick={() => window.open(`#/download/${t.token}`, '_blank')}>
-                  Download PDF
-                </Button>
-              </div>
-            ))}
-          </div>
-        </div>
-        <Button onClick={() => navigate('/')}>Return Home</Button>
-      </div>
-    );
-  }
-
   return (
     <div className="container mx-auto px-4 py-12 max-w-5xl">
-      <h1 className="text-3xl font-bold mb-8">Checkout</h1>
+      <h1 className="text-3xl font-bold mb-8 text-center">Complete Your Purchase</h1>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
-        
-        {/* Payment Form (Simulated Stripe) */}
-        <div>
-          <form onSubmit={handlePayment} className="space-y-6 bg-[hsl(var(--card))] p-6 rounded-xl border border-[hsl(var(--border))] shadow-sm">
+        {/* Payment Form */}
+        <div className="order-2 md:order-1">
+          <form onSubmit={handleStripeCheckout} className="space-y-6 bg-[hsl(var(--card))] p-8 rounded-2xl border border-[hsl(var(--border))] shadow-xl">
+            <h3 className="text-xl font-bold mb-4 flex items-center gap-2">
+              <SafeIcon icon={FiLock} className="text-[hsl(var(--primary))]" />
+              Secure Checkout
+            </h3>
+            
             <div>
-              <label className="block text-sm font-medium mb-2">Email Address (for delivery)</label>
+              <label className="block text-sm font-medium mb-2">Delivery Email Address</label>
               <Input 
                 type="email" 
                 required 
                 value={email} 
-                onChange={e => setEmail(e.target.value)}
-                placeholder="you@example.com"
+                onChange={e => setEmail(e.target.value)} 
+                placeholder="you@example.com" 
+                className="h-12"
               />
+              <p className="text-xs text-[hsl(var(--muted-foreground))] mt-2">
+                Download links will be sent to this email address.
+              </p>
             </div>
-            
+
             <div className="pt-4 border-t border-[hsl(var(--border))]">
-              <div className="flex items-center gap-2 mb-4 text-[hsl(var(--muted-foreground))]">
-                <SafeIcon icon={FiLock} />
-                <span className="text-sm">Secure Payment (Simulated)</span>
-              </div>
-              <div className="space-y-4 opacity-70 pointer-events-none">
-                <Input placeholder="Card Number" value="**** **** **** 4242" readOnly />
-                <div className="grid grid-cols-2 gap-4">
-                  <Input placeholder="MM/YY" value="12/25" readOnly />
-                  <Input placeholder="CVC" value="***" readOnly />
-                </div>
+              <p className="text-sm text-[hsl(var(--muted-foreground))] mb-4">
+                You will be redirected to Stripe's secure payment page to complete your purchase.
+              </p>
+              
+              <div className="grid grid-cols-2 gap-4 opacity-50 grayscale scale-95 pointer-events-none mb-6">
+                 <div className="h-10 bg-gray-200 dark:bg-gray-700 rounded flex items-center justify-center text-[10px] font-bold">APPLE PAY</div>
+                 <div className="h-10 bg-gray-200 dark:bg-gray-700 rounded flex items-center justify-center text-[10px] font-bold">GOOGLE PAY</div>
               </div>
             </div>
 
-            <Button type="submit" className="w-full" size="lg" disabled={loading || !email}>
-              {loading ? 'Processing...' : `Pay ${(cartTotal / 100).toFixed(2)}`}
+            <Button type="submit" className="w-full h-14 text-lg font-bold shadow-lg shadow-[hsl(var(--primary))]/20" disabled={loading || !email}>
+              {loading ? 'Initializing Stripe...' : `Pay ${(cartTotal / 100).toFixed(2)} with Stripe`}
             </Button>
           </form>
         </div>
 
         {/* Order Summary */}
-        <div className="bg-[hsl(var(--muted))/20] p-6 rounded-xl border border-[hsl(var(--border))] h-fit">
-          <h3 className="font-bold text-lg mb-4">Order Summary</h3>
-          <div className="space-y-4 mb-6">
-            {cart.map(item => (
-              <div key={item.id} className="flex justify-between">
-                <div className="flex gap-4">
-                  <img src={item.cover_image_url} alt={item.title} className="w-12 h-16 object-cover rounded" />
-                  <div>
-                    <p className="font-medium line-clamp-1">{item.title}</p>
-                    <p className="text-sm text-[hsl(var(--muted-foreground))]">Qty: {item.quantity}</p>
+        <div className="order-1 md:order-2">
+          <div className="bg-[hsl(var(--muted))/20] p-8 rounded-2xl border border-[hsl(var(--border))] h-fit sticky top-24">
+            <h3 className="font-bold text-lg mb-6">Order Summary</h3>
+            <div className="space-y-6 mb-8 max-h-[400px] overflow-y-auto pr-2">
+              {cart.map(item => (
+                <div key={item.id} className="flex justify-between items-center">
+                  <div className="flex gap-4">
+                    <img src={item.cover_image_url} alt={item.title} className="w-14 h-20 object-cover rounded shadow-sm" />
+                    <div>
+                      <p className="font-bold line-clamp-1">{item.title}</p>
+                      <p className="text-sm text-[hsl(var(--muted-foreground))]">Quantity: {item.quantity}</p>
+                      <p className="text-sm font-medium mt-1">${(item.price / 100).toFixed(2)} each</p>
+                    </div>
                   </div>
+                  <p className="font-bold">${((item.price * item.quantity) / 100).toFixed(2)}</p>
                 </div>
-                <p className="font-medium">${((item.price * item.quantity) / 100).toFixed(2)}</p>
-              </div>
-            ))}
-          </div>
-          <div className="border-t border-[hsl(var(--border))] pt-4 space-y-2">
-            <div className="flex justify-between text-[hsl(var(--muted-foreground))]">
-              <span>Subtotal</span>
-              <span>${(cartTotal / 100).toFixed(2)}</span>
+              ))}
             </div>
-            <div className="flex justify-between font-bold text-xl pt-2">
-              <span>Total</span>
-              <span>${(cartTotal / 100).toFixed(2)}</span>
+            <div className="border-t border-[hsl(var(--border))] pt-6 space-y-3">
+              <div className="flex justify-between text-[hsl(var(--muted-foreground))]">
+                <span>Subtotal</span>
+                <span>${(cartTotal / 100).toFixed(2)}</span>
+              </div>
+              <div className="flex justify-between text-[hsl(var(--muted-foreground))]">
+                <span>Delivery</span>
+                <span className="text-green-500 font-medium">Free (Instant)</span>
+              </div>
+              <div className="flex justify-between font-bold text-2xl pt-4 border-t border-[hsl(var(--border))]">
+                <span>Total</span>
+                <span>${(cartTotal / 100).toFixed(2)}</span>
+              </div>
             </div>
           </div>
         </div>
-
       </div>
     </div>
   );

@@ -5,8 +5,10 @@ import { useCart } from '../context/CartContext';
 import { StarRating } from '../components/books/StarRating';
 import { Button } from '../components/ui/Button';
 import { Badge } from '../components/ui/Badge';
+import { ReviewSection } from '../components/books/ReviewSection';
+import { PdfPreviewModal } from '../components/pdf/PdfPreviewModal';
 import SafeIcon from '../common/SafeIcon';
-import { FiShoppingCart, FiBookOpen, FiCheck } from 'react-icons/fi';
+import { FiShoppingCart, FiBookOpen, FiCheck, FiEye } from 'react-icons/fi';
 
 export const BookDetail = () => {
   const { id } = useParams();
@@ -14,6 +16,7 @@ export const BookDetail = () => {
   const { addToCart } = useCart();
   const [book, setBook] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [isPreviewOpen, setIsPreviewOpen] = useState(false);
 
   useEffect(() => {
     api.getBookById(id).then(data => {
@@ -25,7 +28,7 @@ export const BookDetail = () => {
   if (loading) return <div className="h-screen flex items-center justify-center">Loading...</div>;
   if (!book) return <div className="h-screen flex items-center justify-center">Book not found</div>;
 
-  const handleBuyNow = () => {
+  const handleBuyNow = async () => {
     addToCart(book);
     navigate('/checkout');
   };
@@ -37,6 +40,12 @@ export const BookDetail = () => {
         <div className="w-full md:w-1/3 max-w-sm mx-auto md:mx-0">
           <div className="rounded-xl overflow-hidden shadow-2xl border border-[hsl(var(--border))] sticky top-24">
             <img src={book.cover_image_url} alt={book.title} className="w-full h-auto object-cover" />
+            <button 
+              onClick={() => setIsPreviewOpen(true)}
+              className="absolute bottom-4 right-4 bg-white/90 dark:bg-black/80 backdrop-blur-md p-3 rounded-full shadow-lg hover:scale-110 transition-transform"
+            >
+              <SafeIcon icon={FiEye} className="w-5 h-5" />
+            </button>
           </div>
         </div>
 
@@ -65,6 +74,9 @@ export const BookDetail = () => {
             <Button size="lg" variant="accent" className="flex-1 gap-2" onClick={handleBuyNow}>
               Buy Now
             </Button>
+            <Button size="lg" variant="outline" className="gap-2" onClick={() => setIsPreviewOpen(true)}>
+              <SafeIcon icon={FiBookOpen} /> Read Sample
+            </Button>
           </div>
 
           <div className="prose dark:prose-invert max-w-none mb-12">
@@ -83,6 +95,15 @@ export const BookDetail = () => {
           </div>
         </div>
       </div>
+
+      <ReviewSection bookId={book.id} />
+
+      <PdfPreviewModal
+        isOpen={isPreviewOpen}
+        onClose={() => setIsPreviewOpen(false)}
+        previewUrl={book.preview_pdf_url}
+        title={book.title}
+      />
     </div>
   );
 };

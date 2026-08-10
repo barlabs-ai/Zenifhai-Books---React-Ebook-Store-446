@@ -6,6 +6,7 @@ import { Catalog } from './pages/Catalog';
 import { BookDetail } from './pages/BookDetail';
 import { Checkout } from './pages/Checkout';
 import { Download } from './pages/Download';
+import { Success } from './pages/Success';
 import { AdminDashboard } from './pages/AdminDashboard';
 import '@questlabs/react-sdk/dist/style.css';
 
@@ -17,6 +18,7 @@ function App() {
         <Route path="catalog" element={<Catalog />} />
         <Route path="book/:id" element={<BookDetail />} />
         <Route path="checkout" element={<Checkout />} />
+        <Route path="checkout/success" element={<Success />} />
         <Route path="download/:token" element={<Download />} />
         <Route path="admin" element={<AdminDashboard />} />
       </Route>
